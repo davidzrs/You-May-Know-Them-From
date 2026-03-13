@@ -1,0 +1,24 @@
+{
+    "manifest_version": 3,
+    "name": "You May Know Them From",
+    "version": "0.1",
+    "description": "Shows dramas you've completed that feature the selected actor on MyDramaList.",
+    "permissions": ["storage"],
+    "host_permissions": ["https://mydramalist.com/*"],
+    "content_scripts": [
+      {
+        "matches": ["https://mydramalist.com/people/*"],
+        "js": ["content.js"],
+        "css": ["styles.css"]
+      }
+    ],
+    "options_ui": {
+      "page": "options.html", 
+      "open_in_tab": true
+    },
+    "action": {
+      "default_title": "You May Know Them From",
+      "default_popup": "popup.html"
+    }
+  }
+  
