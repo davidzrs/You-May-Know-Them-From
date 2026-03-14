@@ -32,10 +32,19 @@ function idFromHref(href) {
 }
 
 /**
- * Fetch one MDL status page (completed, watching, etc.)
- * and return a Set of title IDs found there.
+ * Fetch one MDL list page (completed, watching, on_hold, dropped)
+ * and return a Map of titles found there.
+ *
+ * Each entry will look like:
+ * id -> {
+ *   id,
+ *   name,
+ *   url,
+ *   poster,
+ *   status
+ * }
  */
-async function fetchIdsFromStatusPage(username, statusName) {
+async function fetchTitlesFromStatusPage(username, statusName) {
   const url = `https://mydramalist.com/dramalist/${username}/${statusName}`;
 
   const response = await fetch(url);
@@ -44,23 +53,72 @@ async function fetchIdsFromStatusPage(username, statusName) {
   const parser = new DOMParser();
   const doc = parser.parseFromString(html, "text/html");
 
-  const links = [...doc.querySelectorAll('a[href^="/"]')];
+  const titles = new Map();
 
-  const ids = new Set();
+  // Find all links that look like title links
+  const links = [...doc.querySelectorAll('a[href^="/"]')];
 
   for (const link of links) {
     const href = link.getAttribute("href") || "";
     const id = idFromHref(href);
 
-    if (id) {
-      ids.add(id);
+    if (!id) {
+      continue;
+    }
+
+    const name = (link.textContent || "").trim();
+    const fullUrl = `https://mydramalist.com${href}`;
+
+    const container =
+      link.closest("tr, .mdl-style-col, .list-item, .box, .card, li") || link.parentElement;
+
+    const img = container ? container.querySelector("img") : null;
+
+    let poster = "";
+    if (img) {
+      poster =
+        img.getAttribute("src") ||
+        img.getAttribute("data-src") ||
+        img.getAttribute("data-original") ||
+        "";
+    }
+
+    // DEBUG: only log for the first few matched title links
+    if (id === "15999" || id === "23920") {
+      console.log("==== DEBUG TITLE ====");
+      console.log("name:", name);
+      console.log("href:", href);
+      console.log("container:", container);
+      console.log("container HTML:", container ? container.outerHTML : "NO CONTAINER");
+      console.log("img found:", img);
+      console.log("poster extracted:", poster);
+    }
+
+
+    // If the poster is a relative path, convert it to a full MDL URL
+    if (poster && poster.startsWith("/")) {
+      poster = `https://mydramalist.com${poster}`;
+    }
+
+    if (!name) {
+      continue;
+    }
+
+    if (!titles.has(id)) {
+      titles.set(id, {
+        id,
+        name,
+        url: fullUrl,
+        poster,
+        status: statusName
+      });
     }
   }
 
-  return ids;
+  return titles;
 }
 
-// Sync all watched-ish statuses
+
 syncButton.addEventListener("click", async () => {
   const username = usernameInput.value.trim();
 
@@ -79,22 +137,31 @@ syncButton.addEventListener("click", async () => {
       "dropped"
     ];
 
-    const allIds = new Set();
+    const allTitles = new Map();
 
     for (const statusName of statusesToFetch) {
       statusText.textContent = `Syncing ${statusName}...`;
 
-      const idsFromThisStatus = await fetchIdsFromStatusPage(username, statusName);
+      const titlesFromThisStatus = await fetchTitlesFromStatusPage(username, statusName);
 
-      for (const id of idsFromThisStatus) {
-        allIds.add(id);
+      for (const [id, data] of titlesFromThisStatus.entries()) {
+        // If already present, keep the first one we found
+        if (!allTitles.has(id)) {
+          allTitles.set(id, data);
+        }
       }
     }
 
+    const syncedTitles = Object.fromEntries(allTitles);
+    const syncedIds = Object.keys(syncedTitles);
+
     chrome.storage.local.set(
-      { syncedIds: [...allIds] },
+      {
+        syncedIds,
+        syncedTitles
+      },
       () => {
-        statusText.textContent = `Synced ${allIds.size} titles from all lists!`;
+        statusText.textContent = `Synced ${syncedIds.length} titles from all lists!`;
       }
     );
 

@@ -153,11 +153,13 @@ function startExtension() {
   const movieTitles = titlesFromTableAfter("Movie");
   const actorTitles = [...dramaTitles, ...movieTitles]; 
 
-  chrome.storage.local.get(["syncedIds"], (result) => {
+  chrome.storage.local.get(["syncedIds", "syncedTitles"], (result) => {
     const syncedIds = result.syncedIds || [];
+    const syncedTitles = result.syncedTitles || {};
     const watchedSet = new Set(syncedIds);
 
     console.log("[YMKTF] Synced IDs from storage:", syncedIds);
+    console.log("[YMKTF] Synced title metadata:", syncedTitles);
 
     const matches = actorTitles.filter(t => watchedSet.has(t.id));
     console.log("[YMKTF] Matches found:", matches);
@@ -174,6 +176,7 @@ function startExtension() {
       listEl.textContent = "— none yet —";
     }
   });
+
   
 } startExtension();
 
