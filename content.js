@@ -1,7 +1,6 @@
-// This function is the main entry point for the extension.
-// It sets a flag so it runs only once per page.
+// Main entry point for the extension
 function startExtension() {
-  const FLAG_NAME = "ymktfromHasRun"; // ymktfrom = you may know them from has run
+  const FLAG_NAME = "ymktfromHasRun";
 
   if (window[FLAG_NAME]) {
     console.log("Extension already running. Skipping reload.");
@@ -11,79 +10,95 @@ function startExtension() {
   window[FLAG_NAME] = true;
   console.log("You May Know Them From: script started!");
 
-  function mountBanner() {
-    let root = document.querySelector("#ymktf");
-    if (!root) { 
-      root = document.createElement("div"); 
-      root.id = "ymktf"; 
-      Object.assign(root.style, {
-        position: "fixed", 
-        top: "56px", 
-        left: "0",
-        right: "0",
-        zIndex: "999999", 
-        display: "flex",
-        justifyContent: "center", 
-        pointerEvents: "none", 
-      });
+  function mountUI() {
+    let root = document.querySelector("#ymktf-root");
+    if (root) return root;
 
+    root = document.createElement("div");
+    root.id = "ymktf-root";
 
-      const inner = document.createElement("div");
-      inner.id = "ymktf-inner";
-      Object.assign(inner.style, {
-        background: "#111", 
-        color: "#fff", 
-        padding: "10px 14px", 
-        font: "16px/1.4 system-ui, sans-serif", 
-        borderRadius: "0 0 10px 10px", 
-        boxShadow: "0 6px 18px rgba(0,0,0,.18)", 
-        pointerEvents: "auto", 
-        maxWidth: "980px", 
-        width: "fit-content" 
-      });
-      inner.innerHTML = ` 
-        <strong>You may know them from:</strong> 
-        <span id="ymktf-list" style="opacity:.85;margin-left:6px">loading…</span>
-      `;
+    root.innerHTML = `
+      <div id="ymktf-card" class="ymktf-card">
+        <div class="ymktf-card__top">
+          <div>
+            <div id="ymktf-heading" class="ymktf-heading">You may know them from</div>
+            <div id="ymktf-subtitle" class="ymktf-subtitle">Loading…</div>
+          </div>
+          <button id="ymktf-show-more" class="ymktf-button" hidden>Show more</button>
+        </div>
+      </div>
 
-      root.appendChild(inner); 
-      document.documentElement.appendChild(root); 
+      <div id="ymktf-modal-backdrop" class="ymktf-modal-backdrop" hidden>
+        <div id="ymktf-modal" class="ymktf-modal" role="dialog" aria-modal="true" aria-label="Matched titles">
+          <div class="ymktf-modal__header">
+            <div>
+              <div class="ymktf-modal__title">You may know them from</div>
+              <div id="ymktf-modal-subtitle" class="ymktf-modal__subtitle"></div>
+            </div>
+            <button id="ymktf-close-modal" class="ymktf-close-button" aria-label="Close">×</button>
+          </div>
+
+          <div id="ymktf-modal-grid" class="ymktf-modal-grid"></div>
+        </div>
+      </div>
+    `;
+
+    document.documentElement.appendChild(root);
+
+    const card = root.querySelector("#ymktf-card");
+    const showMoreButton = root.querySelector("#ymktf-show-more");
+    const backdrop = root.querySelector("#ymktf-modal-backdrop");
+    const closeButton = root.querySelector("#ymktf-close-modal");
+
+    function reserveSpaceForBanner() {
+      const bannerHeight = card.offsetHeight;
+
+      // put enough space at the top of the page so the banner does not cover content
+      document.body.style.paddingTop = `${bannerHeight + 18}px`;
     }
+
+    // reserve space now
+    requestAnimationFrame(reserveSpaceForBanner);
+
+    // reserve space again when window resizes
+    window.addEventListener("resize", reserveSpaceForBanner);
+
+    showMoreButton.addEventListener("click", () => {
+      backdrop.hidden = false;
+      document.body.style.overflow = "hidden";
+    });
+
+    closeButton.addEventListener("click", () => {
+      backdrop.hidden = true;
+      document.body.style.overflow = "";
+    });
+
+    backdrop.addEventListener("click", (event) => {
+      if (event.target === backdrop) {
+        backdrop.hidden = true;
+        document.body.style.overflow = "";
+      }
+    });
+
+    return root;
   }
-  mountBanner();
 
 
+  const uiRoot = mountUI();
+
+  // ------------------------------------------------------------
+  // Helpers
+  // ------------------------------------------------------------
   function findHeading(text) {
     const t = text.toLowerCase();
-    for (const h of document.querySelectorAll("h1,h2,h3,h4,h5,h6")) { 
+    for (const h of document.querySelectorAll("h1,h2,h3,h4,h5,h6")) {
       if ((h.textContent || "").trim().toLowerCase().includes(t)) {
         return h;
-      } 
+      }
     }
     return null;
   }
 
-  /**
-   * Extracts the numeric drama ID from a MyDramaList link (href).
-   *
-   * MyDramaList uses links like:
-   *   /694231-mr-sunshine
-   *   /782622-would-you-marry-me
-   * and we only want the numeric ID at the start ("694231", "782622", etc).
-   *
-   * So this function looks for:
-   *   - a forward slash `/` at the beginning
-   *   - followed by one or more digits
-   *   - followed by a dash `-` (which shows up after the id, starting to say the name of the drama)
-   *
-   * Examples:
-   *   idFromHref("/694231-mr-sunshine") → "694231"
-   *   idFromHref("/people/2551-choi-woo-shik") → undefined
-   *   idFromHref("/19776-the-package") → "19776"
-   *
-   * @param {string} href - The URL path to check.
-   * @returns {string|undefined} - The extracted ID, or undefined if not found.
-   */
   function idFromHref(href) {
     const match = href.match(/^\/(\d+)-/);
     if (match) {
@@ -92,67 +107,137 @@ function startExtension() {
     return undefined;
   }
 
-
-  /**
-   * Finds all titles (dramas or movies) listed under a given section heading on the MyDramaList page.
-   *
-   * For example, calling `titlesFromTableAfter("Drama")` will:
-   *   1. Find the h5 heading with the text “Drama”.
-   *   2. Look for the table that comes right after it.
-   *   3. Extract all the drama links (href="/12345-drama-name">...) inside that table.
-   *   4. Turn them into an array of objects like:
-   *        { id: "12345", name: "Drama Name", url: "https://mydramalist.com/12345-drama-name" }
-   *   5. Return that array (without duplicates).
-   *
-   * Example output:
-   * [
-   *   { id: "694231", name: "Our Beloved Summer", url: "https://mydramalist.com/694231-us-that-year" },
-   *   { id: "782622", name: "Would You Marry Me?", url: "https://mydramalist.com/782622-would-you-marry-me" },
-   *   ...
-   * ]
-   *
-   * @param {string} headingText - The section heading to search for ("Drama", "Movie", etc.).
-   * @returns {Array<{id: string, name: string, url: string}>} - A list of title objects found under that heading.
-   */
   function titlesFromTableAfter(headingText) {
     const heading = findHeading(headingText);
     if (!heading) {
       console.log(`[YMKTF] Heading "${headingText}" not found`);
       return [];
     }
-    
+
     let table = heading.nextElementSibling;
     while (table && table.tagName !== "TABLE") {
       table = table.nextElementSibling;
     }
-    
+
     if (!table || table.tagName !== "TABLE") {
       console.log(`[YMKTF] No table found after "${headingText}" heading`);
       return [];
     }
-    
-    console.log(`[YMKTF] Found table after "${headingText}":`, table);
+
     const links = [...table.querySelectorAll('a[href^="/"]')];
-    // links will be a list of every link the table has like <a href="/694231-us-that-year">Our Beloved Summer</a>
-    console.log(`[YMKTF] Found ${links.length} links in "${headingText}" table`);
-    
-    const seen = new Map(); 
-    for (const a of links) { 
+    const seen = new Map();
+
+    for (const a of links) {
       const href = a.getAttribute("href") || "";
       const id = idFromHref(href);
       const name = (a.textContent || "").trim();
+
       if (id && name && !seen.has(id)) {
-        seen.set(id, { id, name, url: new URL(href, location.origin).href });
+        seen.set(id, {
+          id,
+          name,
+          url: `https://mydramalist.com${href}`
+        });
       }
     }
-    return [...seen.values()]; 
+
+    return [...seen.values()];
   }
 
-  // gather actor titles (Drama + Movie)
+  function prettyStatus(status) {
+    if (!status) return "";
+    if (status === "on_hold") return "On Hold";
+    if (status === "watching") return "Watching";
+    if (status === "completed") return "Completed";
+    if (status === "dropped") return "Dropped";
+    return status;
+  }
+
+  function buildMatchedTitleData(matches, syncedTitles) {
+    return matches.map(match => {
+      const stored = syncedTitles[match.id] || {};
+
+      return {
+        id: match.id,
+        name: stored.name || match.name,
+        url: stored.url || match.url,
+        poster: stored.poster || "",
+        status: stored.status || ""
+      };
+    });
+  }
+
+  function renderSummary(matchedTitles) {
+    const headingEl = uiRoot.querySelector("#ymktf-heading");
+    const subtitleEl = uiRoot.querySelector("#ymktf-subtitle");
+    const showMoreButton = uiRoot.querySelector("#ymktf-show-more");
+
+    if (matchedTitles.length === 0) {
+      headingEl.textContent = "You may know them from";
+      subtitleEl.textContent = "No matches found yet.";
+      showMoreButton.hidden = true;
+      return;
+    }
+
+    headingEl.textContent = `You may know them from ${matchedTitles.length} title${matchedTitles.length === 1 ? "" : "s"}`;
+
+    const previewNames = matchedTitles.slice(0, 3).map(item => item.name);
+    let previewText = previewNames.join(", ");
+
+    if (matchedTitles.length > 3) {
+      previewText += ` +${matchedTitles.length - 3} more`;
+    }
+
+    subtitleEl.textContent = previewText;
+    showMoreButton.hidden = matchedTitles.length === 0;
+  }
+
+  function renderModal(matchedTitles) {
+    const modalSubtitle = uiRoot.querySelector("#ymktf-modal-subtitle");
+    const modalGrid = uiRoot.querySelector("#ymktf-modal-grid");
+
+    modalSubtitle.textContent = `${matchedTitles.length} matched title${matchedTitles.length === 1 ? "" : "s"}`;
+    modalGrid.innerHTML = "";
+
+    for (const item of matchedTitles) {
+      const card = document.createElement("a");
+      card.className = "ymktf-title-card";
+      card.href = item.url;
+      card.target = "_blank";
+      card.rel = "noopener noreferrer";
+
+      const posterHtml = item.poster
+        ? `<img class="ymktf-title-card__poster" src="${item.poster}" alt="${item.name} poster">`
+        : `<div class="ymktf-title-card__poster-placeholder">No poster</div>`;
+
+      card.innerHTML = `
+        <div class="ymktf-title-card__media">
+          ${posterHtml}
+        </div>
+        <div class="ymktf-title-card__body">
+          <div class="ymktf-title-card__name">${item.name}</div>
+          <div class="ymktf-title-card__meta">${prettyStatus(item.status)}</div>
+        </div>
+      `;
+
+      modalGrid.appendChild(card);
+    }
+  }
+
+  // ------------------------------------------------------------
+  // Gather actor titles from the page
+  // ------------------------------------------------------------
   const dramaTitles = titlesFromTableAfter("Drama");
   const movieTitles = titlesFromTableAfter("Movie");
-  const actorTitles = [...dramaTitles, ...movieTitles]; 
+  const actorTitles = [...dramaTitles, ...movieTitles];
 
+  console.log("[YMKTF] Drama titles found:", dramaTitles);
+  console.log("[YMKTF] Movie titles found:", movieTitles);
+  console.log("[YMKTF] All actor titles:", actorTitles);
+
+  // ------------------------------------------------------------
+  // Read synced user data and render matches
+  // ------------------------------------------------------------
   chrome.storage.local.get(["syncedIds", "syncedTitles"], (result) => {
     const syncedIds = result.syncedIds || [];
     const syncedTitles = result.syncedTitles || {};
@@ -164,19 +249,11 @@ function startExtension() {
     const matches = actorTitles.filter(t => watchedSet.has(t.id));
     console.log("[YMKTF] Matches found:", matches);
 
-    const listEl = document.querySelector("#ymktf-list");
-    if (!listEl) {
-      console.error("[YMKTF] Could not find #ymktf-list element!");
-      return;
-    }
+    const matchedTitles = buildMatchedTitleData(matches, syncedTitles);
 
-    if (matches.length) {
-      listEl.textContent = matches.map(m => m.name).join(", ");
-    } else {
-      listEl.textContent = "— none yet —";
-    }
+    renderSummary(matchedTitles);
+    renderModal(matchedTitles);
   });
+}
 
-  
-} startExtension();
-
+startExtension();

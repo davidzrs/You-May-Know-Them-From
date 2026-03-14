@@ -77,11 +77,12 @@ async function fetchTitlesFromStatusPage(username, statusName) {
     let poster = "";
     if (img) {
       poster =
-        img.getAttribute("src") ||
         img.getAttribute("data-src") ||
         img.getAttribute("data-original") ||
+        img.getAttribute("src") ||
         "";
     }
+
 
     // DEBUG: only log for the first few matched title links
     if (id === "15999" || id === "23920") {
