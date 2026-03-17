@@ -224,16 +224,34 @@ function startExtension() {
     }
   }
 
-  // ------------------------------------------------------------
-  // Gather actor titles from the page
-  // ------------------------------------------------------------
-  const dramaTitles = titlesFromTableAfter("Drama");
-  const movieTitles = titlesFromTableAfter("Movie");
-  const actorTitles = [...dramaTitles, ...movieTitles];
+  // what sections from /people pages do we want to grab?
+  const sectionNames = [
+    "Drama",
+    "Movie",
+    "TV Show",
+    "Special",
+    "Director",
+    "Screenwriter",
+    "Writer"
+  ];
 
-  console.log("[YMKTF] Drama titles found:", dramaTitles);
-  console.log("[YMKTF] Movie titles found:", movieTitles);
-  console.log("[YMKTF] All actor titles:", actorTitles);
+  const allFoundTitles = sectionNames.flatMap(sectionName =>
+    titlesFromTableAfter(sectionName)
+  );
+
+  // Remove duplicates by title ID
+  const actorTitleMap = new Map();
+  for (const title of allFoundTitles) {
+    if (!actorTitleMap.has(title.id)) {
+      actorTitleMap.set(title.id, title);
+    }
+  }
+
+  const actorTitles = [...actorTitleMap.values()];
+
+  console.log("[YMKTF] Sections checked:", sectionNames);
+  console.log("[YMKTF] All actor titles found:", actorTitles);
+  console.log("[YMKTF] Actor title IDs:", actorTitles.map(t => t.id));
 
   // ------------------------------------------------------------
   // Read synced user data and render matches
