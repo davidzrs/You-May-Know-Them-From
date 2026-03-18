@@ -3,10 +3,17 @@ const saveButton = document.querySelector("#saveButton");
 const syncButton = document.querySelector("#syncButton");
 const statusText = document.querySelector("#status");
 
+function setStatus(message) {
+  statusText.textContent = message;
+}
+
 // Load saved username when popup opens
 chrome.storage.local.get(["mdlUsername"], (result) => {
   if (result.mdlUsername) {
     usernameInput.value = result.mdlUsername;
+    setStatus("Ready to sync.");
+  } else {
+    setStatus("Enter your MyDramaList username to begin.");
   }
 });
 
@@ -14,8 +21,13 @@ chrome.storage.local.get(["mdlUsername"], (result) => {
 saveButton.addEventListener("click", () => {
   const username = usernameInput.value.trim();
 
+  if (!username) {
+    setStatus("Please enter a username first.");
+    return;
+  }
+
   chrome.storage.local.set({ mdlUsername: username }, () => {
-    statusText.textContent = "Username saved!";
+    setStatus("Username saved.");
   });
 });
 
@@ -35,7 +47,7 @@ function idFromHref(href) {
  * Fetch one MDL list page (completed, watching, on_hold, dropped)
  * and return a Map of titles found there.
  *
- * Each entry will look like:
+ * Each entry looks like:
  * id -> {
  *   id,
  *   name,
@@ -54,8 +66,6 @@ async function fetchTitlesFromStatusPage(username, statusName) {
   const doc = parser.parseFromString(html, "text/html");
 
   const titles = new Map();
-
-  // Find all links that look like title links
   const links = [...doc.querySelectorAll('a[href^="/"]')];
 
   for (const link of links) {
@@ -67,10 +77,15 @@ async function fetchTitlesFromStatusPage(username, statusName) {
     }
 
     const name = (link.textContent || "").trim();
+    if (!name) {
+      continue;
+    }
+
     const fullUrl = `https://mydramalist.com${href}`;
 
     const container =
-      link.closest("tr, .mdl-style-col, .list-item, .box, .card, li") || link.parentElement;
+      link.closest("tr, .mdl-style-col, .list-item, .box, .card, li") ||
+      link.parentElement;
 
     const img = container ? container.querySelector("img") : null;
 
@@ -83,26 +98,8 @@ async function fetchTitlesFromStatusPage(username, statusName) {
         "";
     }
 
-
-    // DEBUG: only log for the first few matched title links
-    if (id === "15999" || id === "23920") {
-      console.log("==== DEBUG TITLE ====");
-      console.log("name:", name);
-      console.log("href:", href);
-      console.log("container:", container);
-      console.log("container HTML:", container ? container.outerHTML : "NO CONTAINER");
-      console.log("img found:", img);
-      console.log("poster extracted:", poster);
-    }
-
-
-    // If the poster is a relative path, convert it to a full MDL URL
     if (poster && poster.startsWith("/")) {
       poster = `https://mydramalist.com${poster}`;
-    }
-
-    if (!name) {
-      continue;
     }
 
     if (!titles.has(id)) {
@@ -119,16 +116,15 @@ async function fetchTitlesFromStatusPage(username, statusName) {
   return titles;
 }
 
-
 syncButton.addEventListener("click", async () => {
   const username = usernameInput.value.trim();
 
   if (!username) {
-    statusText.textContent = "Please enter a username first.";
+    setStatus("Please enter a username first.");
     return;
   }
 
-  statusText.textContent = "Syncing lists...";
+  setStatus("Syncing lists...");
 
   try {
     const statusesToFetch = [
@@ -141,12 +137,11 @@ syncButton.addEventListener("click", async () => {
     const allTitles = new Map();
 
     for (const statusName of statusesToFetch) {
-      statusText.textContent = `Syncing ${statusName}...`;
+      setStatus(`Fetching ${statusName.replace("_", " ")}...`);
 
       const titlesFromThisStatus = await fetchTitlesFromStatusPage(username, statusName);
 
       for (const [id, data] of titlesFromThisStatus.entries()) {
-        // If already present, keep the first one we found
         if (!allTitles.has(id)) {
           allTitles.set(id, data);
         }
@@ -158,16 +153,16 @@ syncButton.addEventListener("click", async () => {
 
     chrome.storage.local.set(
       {
+        mdlUsername: username,
         syncedIds,
         syncedTitles
       },
       () => {
-        statusText.textContent = `Synced ${syncedIds.length} titles from all lists!`;
+        setStatus(`Synced ${syncedIds.length} titles successfully.`);
       }
     );
-
   } catch (error) {
     console.error("Error syncing lists:", error);
-    statusText.textContent = "Failed to sync lists.";
+    setStatus("Failed to sync lists.");
   }
 });
