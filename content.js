@@ -64,8 +64,15 @@ function startExtension() {
     window.addEventListener("resize", reserveSpaceForBanner);
 
     showMoreButton.addEventListener("click", () => {
+      renderModal(currentMatchedTitles);
+
       backdrop.hidden = false;
       document.body.style.overflow = "hidden";
+
+      // Save updated recency order in the background
+      storageSet({ posterCacheOrder });
+
+      enhanceModalPosters(currentMatchedTitles);
     });
 
     closeButton.addEventListener("click", () => {
@@ -89,6 +96,16 @@ function startExtension() {
   // ------------------------------------------------------------
   // Helpers
   // ------------------------------------------------------------
+  const storageSet = (obj) =>
+    new Promise((resolve) => chrome.storage.local.set(obj, resolve));
+
+  // State shared by the modal
+  let currentMatchedTitles = [];
+  let posterCache = {};
+  let posterCacheOrder = [];
+
+  const MAX_POSTER_CACHE_SIZE = 150;
+
   function findHeading(text) {
     const t = text.toLowerCase();
     for (const h of document.querySelectorAll("h1,h2,h3,h4,h5,h6")) {
@@ -167,6 +184,127 @@ function startExtension() {
     });
   }
 
+  function touchPosterCacheKey(titleId) {
+    // Remove the ID if it already exists in the order list
+    posterCacheOrder = posterCacheOrder.filter(id => id !== titleId);
+
+    // Add it to the end (most recently used)
+    posterCacheOrder.push(titleId);
+  }
+
+  function trimPosterCacheIfNeeded() {
+    while (posterCacheOrder.length > MAX_POSTER_CACHE_SIZE) {
+      const oldestId = posterCacheOrder.shift();
+      if (oldestId) {
+        delete posterCache[oldestId];
+      }
+    }
+  }
+
+  async function savePosterToCache(titleId, posterUrl) {
+    posterCache[titleId] = posterUrl;
+    touchPosterCacheKey(titleId);
+    trimPosterCacheIfNeeded();
+
+    await storageSet({
+      posterCache,
+      posterCacheOrder
+    });
+  }
+
+  function escapeHtml(text) {
+    return String(text)
+      .replaceAll("&", "&amp;")
+      .replaceAll("<", "&lt;")
+      .replaceAll(">", "&gt;")
+      .replaceAll('"', "&quot;")
+      .replaceAll("'", "&#039;");
+  }
+
+  function updateModalPoster(titleId, posterUrl) {
+    const img = uiRoot.querySelector(`img[data-title-id="${titleId}"]`);
+    const placeholder = uiRoot.querySelector(`[data-placeholder-id="${titleId}"]`);
+
+    if (img) {
+      img.src = posterUrl;
+      return;
+    }
+
+    // If there was only a placeholder before, replace it with a real image
+    if (placeholder) {
+      const newImg = document.createElement("img");
+      newImg.className = "ymktf-title-card__poster";
+      newImg.setAttribute("data-title-id", titleId);
+      newImg.alt = "Poster";
+      newImg.src = posterUrl;
+      placeholder.replaceWith(newImg);
+    }
+  }
+
+  async function fetchHQPosterFromTitlePage(titleUrl) {
+    try {
+      const response = await fetch(titleUrl);
+      const html = await response.text();
+
+      const parser = new DOMParser();
+      const doc = parser.parseFromString(html, "text/html");
+
+      // Best first choice: Open Graph image
+      let poster =
+        doc.querySelector('meta[property="og:image"]')?.getAttribute("content") ||
+        doc.querySelector('meta[name="twitter:image"]')?.getAttribute("content") ||
+        "";
+
+      // Fallback: first reasonable image on page if needed
+      if (!poster) {
+        const img =
+          doc.querySelector(".film-cover img") ||
+          doc.querySelector(".box-body img") ||
+          doc.querySelector("img");
+
+        if (img) {
+          poster =
+            img.getAttribute("data-src") ||
+            img.getAttribute("data-original") ||
+            img.getAttribute("src") ||
+            "";
+        }
+      }
+
+      if (poster && poster.startsWith("/")) {
+        poster = `https://mydramalist.com${poster}`;
+      }
+
+      return poster || "";
+    } catch (error) {
+      console.error("[YMKTF] Failed to fetch HQ poster from:", titleUrl, error);
+      return "";
+    }
+  }
+
+  async function enhanceModalPosters(matchedTitles) {
+    for (const item of matchedTitles) {
+      // already cached? nothing to do
+      if (posterCache[item.id]) {
+        continue;
+      }
+
+      // no title URL? skip
+      if (!item.url) {
+        continue;
+      }
+
+      const hqPoster = await fetchHQPosterFromTitlePage(item.url);
+
+      if (!hqPoster) {
+        continue;
+      }
+
+      await savePosterToCache(item.id, hqPoster);
+      updateModalPoster(item.id, hqPoster);
+    }
+  }
+
   function renderSummary(matchedTitles) {
     const headingEl = uiRoot.querySelector("#ymktf-heading");
     const subtitleEl = uiRoot.querySelector("#ymktf-subtitle");
@@ -206,17 +344,24 @@ function startExtension() {
       card.target = "_blank";
       card.rel = "noopener noreferrer";
 
-      const posterHtml = item.poster
-        ? `<img class="ymktf-title-card__poster" src="${item.poster}" alt="${item.name} poster">`
-        : `<div class="ymktf-title-card__poster-placeholder">No poster</div>`;
+      // Prefer HQ cached poster if available
+      const posterToUse = posterCache[item.id] || item.poster || "";
+
+      if (posterCache[item.id]) {
+        touchPosterCacheKey(item.id);
+      }
+
+      const posterHtml = posterToUse
+        ? `<img class="ymktf-title-card__poster" data-title-id="${escapeHtml(item.id)}" src="${escapeHtml(posterToUse)}" alt="${escapeHtml(item.name)} poster">`
+        : `<div class="ymktf-title-card__poster-placeholder" data-placeholder-id="${escapeHtml(item.id)}">No poster</div>`;
 
       card.innerHTML = `
         <div class="ymktf-title-card__media">
           ${posterHtml}
         </div>
         <div class="ymktf-title-card__body">
-          <div class="ymktf-title-card__name">${item.name}</div>
-          <div class="ymktf-title-card__meta">${prettyStatus(item.status)}</div>
+          <div class="ymktf-title-card__name">${escapeHtml(item.name)}</div>
+          <div class="ymktf-title-card__meta">${escapeHtml(prettyStatus(item.status))}</div>
         </div>
       `;
 
@@ -256,18 +401,23 @@ function startExtension() {
   // ------------------------------------------------------------
   // Read synced user data and render matches
   // ------------------------------------------------------------
-  chrome.storage.local.get(["syncedIds", "syncedTitles"], (result) => {
+  chrome.storage.local.get(["syncedIds", "syncedTitles", "posterCache", "posterCacheOrder"], (result) => {
     const syncedIds = result.syncedIds || [];
     const syncedTitles = result.syncedTitles || {};
+    posterCache = result.posterCache || {};
+    posterCacheOrder = result.posterCacheOrder || [];
+
     const watchedSet = new Set(syncedIds);
 
     console.log("[YMKTF] Synced IDs from storage:", syncedIds);
     console.log("[YMKTF] Synced title metadata:", syncedTitles);
+    console.log("[YMKTF] HQ poster cache:", posterCache);
 
     const matches = actorTitles.filter(t => watchedSet.has(t.id));
     console.log("[YMKTF] Matches found:", matches);
 
     const matchedTitles = buildMatchedTitleData(matches, syncedTitles);
+    currentMatchedTitles = matchedTitles;
 
     renderSummary(matchedTitles);
     renderModal(matchedTitles);
