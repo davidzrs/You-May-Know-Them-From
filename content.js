@@ -1,4 +1,3 @@
-// Main entry point for the extension
 function startExtension() {
   const FLAG_NAME = "ymktfromHasRun";
 
@@ -52,15 +51,10 @@ function startExtension() {
 
     function reserveSpaceForBanner() {
       const bannerHeight = card.offsetHeight;
-
-      // put enough space at the top of the page so the banner does not cover content
       document.body.style.paddingTop = `${bannerHeight + 18}px`;
     }
 
-    // reserve space now
     requestAnimationFrame(reserveSpaceForBanner);
-
-    // reserve space again when window resizes
     window.addEventListener("resize", reserveSpaceForBanner);
 
     showMoreButton.addEventListener("click", () => {
@@ -68,8 +62,6 @@ function startExtension() {
 
       backdrop.hidden = false;
       document.body.style.overflow = "hidden";
-
-      // Save updated recency order in the background
       storageSet({ posterCacheOrder });
 
       enhanceModalPosters(currentMatchedTitles);
@@ -90,16 +82,11 @@ function startExtension() {
     return root;
   }
 
-
   const uiRoot = mountUI();
 
-  // ------------------------------------------------------------
-  // Helpers
-  // ------------------------------------------------------------
   const storageSet = (obj) =>
     new Promise((resolve) => chrome.storage.local.set(obj, resolve));
 
-  // State shared by the modal
   let currentMatchedTitles = [];
   let posterCache = {};
   let posterCacheOrder = [];
@@ -185,10 +172,8 @@ function startExtension() {
   }
 
   function touchPosterCacheKey(titleId) {
-    // Remove the ID if it already exists in the order list
     posterCacheOrder = posterCacheOrder.filter(id => id !== titleId);
 
-    // Add it to the end (most recently used)
     posterCacheOrder.push(titleId);
   }
 
@@ -230,7 +215,6 @@ function startExtension() {
       return;
     }
 
-    // If there was only a placeholder before, replace it with a real image
     if (placeholder) {
       const newImg = document.createElement("img");
       newImg.className = "ymktf-title-card__poster";
@@ -249,13 +233,11 @@ function startExtension() {
       const parser = new DOMParser();
       const doc = parser.parseFromString(html, "text/html");
 
-      // Best first choice: Open Graph image
       let poster =
         doc.querySelector('meta[property="og:image"]')?.getAttribute("content") ||
         doc.querySelector('meta[name="twitter:image"]')?.getAttribute("content") ||
         "";
 
-      // Fallback: first reasonable image on page if needed
       if (!poster) {
         const img =
           doc.querySelector(".film-cover img") ||
@@ -284,12 +266,10 @@ function startExtension() {
 
   async function enhanceModalPosters(matchedTitles) {
     for (const item of matchedTitles) {
-      // already cached? nothing to do
       if (posterCache[item.id]) {
         continue;
       }
 
-      // no title URL? skip
       if (!item.url) {
         continue;
       }
@@ -344,7 +324,7 @@ function startExtension() {
       card.target = "_blank";
       card.rel = "noopener noreferrer";
 
-      // Prefer HQ cached poster if available
+      // Prefer HQ cached poster if available (high quality)
       const posterToUse = posterCache[item.id] || item.poster || "";
 
       if (posterCache[item.id]) {
@@ -369,7 +349,7 @@ function startExtension() {
     }
   }
 
-  // what sections from /people pages do we want to grab?
+  // what sections from /people pages do we want to grab? grabbing practically everything although cinematography and composer is prob useless
   const sectionNames = [
     "Drama",
     "Movie",
@@ -377,14 +357,18 @@ function startExtension() {
     "Special",
     "Director",
     "Screenwriter",
-    "Writer"
+    "Writer",
+    "Original Creator",
+    "Executive Producer",
+    "Composer",
+    "Music Director",
+    "Cinematography"
   ];
 
   const allFoundTitles = sectionNames.flatMap(sectionName =>
     titlesFromTableAfter(sectionName)
   );
 
-  // Remove duplicates by title ID
   const actorTitleMap = new Map();
   for (const title of allFoundTitles) {
     if (!actorTitleMap.has(title.id)) {
@@ -398,9 +382,6 @@ function startExtension() {
   console.log("[YMKTF] All actor titles found:", actorTitles);
   console.log("[YMKTF] Actor title IDs:", actorTitles.map(t => t.id));
 
-  // ------------------------------------------------------------
-  // Read synced user data and render matches
-  // ------------------------------------------------------------
   chrome.storage.local.get(["syncedIds", "syncedTitles", "posterCache", "posterCacheOrder"], (result) => {
     const syncedIds = result.syncedIds || [];
     const syncedTitles = result.syncedTitles || {};
