@@ -2,19 +2,56 @@ const usernameInput = document.querySelector("#username");
 const saveButton = document.querySelector("#saveButton");
 const syncButton = document.querySelector("#syncButton");
 const statusText = document.querySelector("#status");
+const lastSyncedText = document.querySelector("#lastSynced");
 
 function setStatus(message) {
   statusText.textContent = message;
 }
 
-// Load saved username when popup opens
-chrome.storage.local.get(["mdlUsername"], (result) => {
+function formatLastSynced(timestamp) {
+  if (!timestamp) {
+    return "Last synced: never";
+  }
+
+  const now = Date.now();
+  const diffMs = now - timestamp;
+  const diffMinutes = Math.floor(diffMs / (1000 * 60));
+  const diffHours = Math.floor(diffMs / (1000 * 60 * 60));
+  const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+
+  if (diffMinutes < 1) {
+    return "Last synced: just now";
+  }
+
+  if (diffMinutes < 60) {
+    return `Last synced: ${diffMinutes} minute${diffMinutes === 1 ? "" : "s"} ago`;
+  }
+
+  if (diffHours < 24) {
+    return `Last synced: ${diffHours} hour${diffHours === 1 ? "" : "s"} ago`;
+  }
+
+  if (diffDays === 1) {
+    return "Last synced: yesterday";
+  }
+
+  return `Last synced: ${diffDays} days ago`;
+}
+
+function setLastSynced(timestamp) {
+  lastSyncedText.textContent = formatLastSynced(timestamp);
+}
+
+// Load saved username + last sync info when popup opens
+chrome.storage.local.get(["mdlUsername", "lastSyncedAt"], (result) => {
   if (result.mdlUsername) {
     usernameInput.value = result.mdlUsername;
     setStatus("Ready to sync.");
   } else {
     setStatus("Enter your MyDramaList username to begin.");
   }
+
+  setLastSynced(result.lastSyncedAt);
 });
 
 // Save username
@@ -150,15 +187,18 @@ syncButton.addEventListener("click", async () => {
 
     const syncedTitles = Object.fromEntries(allTitles);
     const syncedIds = Object.keys(syncedTitles);
+    const lastSyncedAt = Date.now();
 
     chrome.storage.local.set(
       {
         mdlUsername: username,
         syncedIds,
-        syncedTitles
+        syncedTitles,
+        lastSyncedAt
       },
       () => {
         setStatus(`Synced ${syncedIds.length} titles successfully.`);
+        setLastSynced(lastSyncedAt);
       }
     );
   } catch (error) {

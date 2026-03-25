@@ -142,21 +142,73 @@ function startExtension() {
       return [];
     }
 
-    const links = [...table.querySelectorAll('a[href^="/"]')];
+    const rows = [...table.querySelectorAll("tr")];
     const seen = new Map();
 
-    for (const a of links) {
-      const href = a.getAttribute("href") || "";
-      const id = idFromHref(href);
-      const name = (a.textContent || "").trim();
+    const actingSections = new Set([
+      "Drama",
+      "Movie",
+      "TV Show",
+      "Special"
+    ]);
 
-      if (id && name && !seen.has(id)) {
-        seen.set(id, {
-          id,
-          name,
-          url: `https://mydramalist.com${href}`
-        });
+    const staffSections = new Set([
+      "Director",
+      "Screenwriter",
+      "Writer",
+      "Original Creator",
+      "Executive Producer",
+      "Composer",
+      "Music Director",
+      "Cinematography"
+    ]);
+
+    for (const row of rows) {
+      const titleLink = row.querySelector('a[href^="/"]');
+      if (!titleLink) {
+        continue;
       }
+
+      const href = titleLink.getAttribute("href") || "";
+      const id = idFromHref(href);
+      const name = (titleLink.textContent || "").trim();
+
+      if (!id || !name || seen.has(id)) {
+        continue;
+      }
+
+      let creditLabel = "";
+
+      if (actingSections.has(headingText)) {
+        const rowText = row.textContent || "";
+
+        if (rowText.includes("Main Role")) {
+          creditLabel = "Main Role";
+        } else if (rowText.includes("Support Role")) {
+          creditLabel = "Support Role";
+        } else if (rowText.includes("Guest Role")) {
+          creditLabel = "Guest Role";
+        } else if (rowText.includes("Main Host")) {
+          creditLabel = "Main Host";
+        } else if (rowText.includes("Regular Member")) {
+          creditLabel = "Regular Member";
+        } else if (rowText.includes("Bit Part")) {
+          creditLabel = "Bit Part";
+        } else if (rowText.includes("Cameo")) {
+          creditLabel = "Cameo";
+        } else if (rowText.includes("Guest")) {
+          creditLabel = "Guest";
+        }
+      } else if (staffSections.has(headingText)) {
+        creditLabel = headingText;
+      }
+
+      seen.set(id, {
+        id,
+        name,
+        url: `https://mydramalist.com${href}`,
+        creditLabel
+      });
     }
 
     return [...seen.values()];
@@ -171,6 +223,27 @@ function startExtension() {
     return status;
   }
 
+  function buildMetaLines(item) {
+    const lines = [];
+
+    const statusText = prettyStatus(item.status);
+    if (statusText) {
+      lines.push({
+        text: statusText,
+        type: "status"
+      });
+    }
+
+    if (item.creditLabel) {
+      lines.push({
+        text: item.creditLabel,
+        type: "credit"
+      });
+    }
+
+    return lines;
+  }
+
   function buildMatchedTitleData(matches, syncedTitles) {
     return matches.map(match => {
       const stored = syncedTitles[match.id] || {};
@@ -180,7 +253,8 @@ function startExtension() {
         name: stored.name || match.name,
         url: stored.url || match.url,
         poster: stored.poster || "",
-        status: stored.status || ""
+        status: stored.status || "",
+        creditLabel: match.creditLabel || ""
       };
     });
   }
@@ -349,13 +423,19 @@ function startExtension() {
         ? `<img class="ymktf-title-card__poster" data-title-id="${escapeHtml(item.id)}" src="${escapeHtml(posterToUse)}" alt="${escapeHtml(item.name)} poster">`
         : `<div class="ymktf-title-card__poster-placeholder" data-placeholder-id="${escapeHtml(item.id)}">No poster</div>`;
 
+      const metaLines = buildMetaLines(item);
+
       card.innerHTML = `
         <div class="ymktf-title-card__media">
           ${posterHtml}
         </div>
         <div class="ymktf-title-card__body">
           <div class="ymktf-title-card__name">${escapeHtml(item.name)}</div>
-          <div class="ymktf-title-card__meta">${escapeHtml(prettyStatus(item.status))}</div>
+          ${metaLines.map(line => `
+            <div class="ymktf-title-card__meta ymktf-title-card__meta--${escapeHtml(line.type)}">
+              ${escapeHtml(line.text)}
+            </div>
+          `).join("")}
         </div>
       `;
 

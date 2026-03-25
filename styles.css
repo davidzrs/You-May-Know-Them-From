@@ -184,6 +184,17 @@ html {
 }
 
 .ymktf-title-card__meta {
+  line-height: 1.35;
+}
+
+.ymktf-title-card__meta--status {
   font-size: 12px;
-  color: rgba(255, 255, 255, 0.68);
+  color: rgba(255, 255, 255, 0.72);
+  margin-top: 2px;
+}
+
+.ymktf-title-card__meta--credit {
+  font-size: 11px;
+  color: rgba(255, 255, 255, 0.5);
+  margin-top: 2px;
 }
