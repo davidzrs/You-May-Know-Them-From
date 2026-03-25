@@ -1,3 +1,7 @@
+html {
+  scrollbar-gutter: stable;
+}
+
 #ymktf-root {
   position: fixed;
   top: 72px;
