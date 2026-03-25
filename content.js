@@ -444,11 +444,14 @@ function startExtension() {
   }
 
   // what sections from /people pages do we want to grab? grabbing practically everything although cinematography and composer is prob useless
-  const sectionNames = [
+  const actingSectionNames = [
     "Drama",
     "Movie",
     "TV Show",
-    "Special",
+    "Special"
+  ];
+
+  const staffSectionNames = [
     "Director",
     "Screenwriter",
     "Writer",
@@ -459,44 +462,51 @@ function startExtension() {
     "Cinematography"
   ];
 
-  const allFoundTitles = sectionNames.flatMap(sectionName =>
-    titlesFromTableAfter(sectionName)
-  );
+  chrome.storage.local.get(
+    ["syncedIds", "syncedTitles", "posterCache", "posterCacheOrder", "includeStaffCredits"],
+    (result) => {
+      const syncedIds = result.syncedIds || [];
+      const syncedTitles = result.syncedTitles || {};
+      posterCache = result.posterCache || {};
+      posterCacheOrder = result.posterCacheOrder || [];
 
-  const actorTitleMap = new Map();
-  for (const title of allFoundTitles) {
-    if (!actorTitleMap.has(title.id)) {
-      actorTitleMap.set(title.id, title);
+      const includeStaffCredits = result.includeStaffCredits !== false;
+      const sectionNames = includeStaffCredits
+        ? [...actingSectionNames, ...staffSectionNames]
+        : [...actingSectionNames];
+
+      const allFoundTitles = sectionNames.flatMap(sectionName =>
+        titlesFromTableAfter(sectionName)
+      );
+
+      const actorTitleMap = new Map();
+      for (const title of allFoundTitles) {
+        if (!actorTitleMap.has(title.id)) {
+          actorTitleMap.set(title.id, title);
+        }
+      }
+
+      const actorTitles = [...actorTitleMap.values()];
+      const watchedSet = new Set(syncedIds);
+
+      console.log("[YMKTF] Include staff credits:", includeStaffCredits);
+      console.log("[YMKTF] Sections checked:", sectionNames);
+      console.log("[YMKTF] All actor titles found:", actorTitles);
+      console.log("[YMKTF] Actor title IDs:", actorTitles.map(t => t.id));
+      console.log("[YMKTF] Synced IDs from storage:", syncedIds);
+      console.log("[YMKTF] Synced title metadata:", syncedTitles);
+      console.log("[YMKTF] HQ poster cache:", posterCache);
+
+      const matches = actorTitles.filter(t => watchedSet.has(t.id));
+      console.log("[YMKTF] Matches found:", matches);
+
+      const matchedTitles = buildMatchedTitleData(matches, syncedTitles);
+      currentMatchedTitles = matchedTitles;
+
+      renderSummary(matchedTitles);
+      renderModal(matchedTitles);
     }
-  }
-
-  const actorTitles = [...actorTitleMap.values()];
-
-  console.log("[YMKTF] Sections checked:", sectionNames);
-  console.log("[YMKTF] All actor titles found:", actorTitles);
-  console.log("[YMKTF] Actor title IDs:", actorTitles.map(t => t.id));
-
-  chrome.storage.local.get(["syncedIds", "syncedTitles", "posterCache", "posterCacheOrder"], (result) => {
-    const syncedIds = result.syncedIds || [];
-    const syncedTitles = result.syncedTitles || {};
-    posterCache = result.posterCache || {};
-    posterCacheOrder = result.posterCacheOrder || [];
-
-    const watchedSet = new Set(syncedIds);
-
-    console.log("[YMKTF] Synced IDs from storage:", syncedIds);
-    console.log("[YMKTF] Synced title metadata:", syncedTitles);
-    console.log("[YMKTF] HQ poster cache:", posterCache);
-
-    const matches = actorTitles.filter(t => watchedSet.has(t.id));
-    console.log("[YMKTF] Matches found:", matches);
-
-    const matchedTitles = buildMatchedTitleData(matches, syncedTitles);
-    currentMatchedTitles = matchedTitles;
-
-    renderSummary(matchedTitles);
-    renderModal(matchedTitles);
-  });
+  );
 }
 
 startExtension();

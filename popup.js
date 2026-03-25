@@ -1,6 +1,11 @@
 const usernameInput = document.querySelector("#username");
 const saveButton = document.querySelector("#saveButton");
 const syncButton = document.querySelector("#syncButton");
+const clearDataButton = document.querySelector("#clearDataButton");
+const includeStaffCreditsCheckbox = document.querySelector("#includeStaffCredits");
+const settingsButton = document.querySelector("#settingsButton");
+const closeSettingsButton = document.querySelector("#closeSettingsButton");
+const settingsOverlay = document.querySelector("#settingsOverlay");
 const statusText = document.querySelector("#status");
 const lastSyncedText = document.querySelector("#lastSynced");
 
@@ -42,8 +47,15 @@ function setLastSynced(timestamp) {
   lastSyncedText.textContent = formatLastSynced(timestamp);
 }
 
-// Load saved username + last sync info when popup opens
-chrome.storage.local.get(["mdlUsername", "lastSyncedAt"], (result) => {
+function openSettings() {
+  settingsOverlay.removeAttribute("hidden");
+}
+
+function closeSettings() {
+  settingsOverlay.setAttribute("hidden", "");
+}
+
+chrome.storage.local.get(["mdlUsername", "lastSyncedAt", "includeStaffCredits"], (result) => {
   if (result.mdlUsername) {
     usernameInput.value = result.mdlUsername;
     setStatus("Ready to sync.");
@@ -51,10 +63,31 @@ chrome.storage.local.get(["mdlUsername", "lastSyncedAt"], (result) => {
     setStatus("Enter your MyDramaList username to begin.");
   }
 
+  includeStaffCreditsCheckbox.checked = result.includeStaffCredits !== false;
   setLastSynced(result.lastSyncedAt);
 });
 
-// Save username
+settingsButton.addEventListener("click", openSettings);
+closeSettingsButton.addEventListener("click", closeSettings);
+
+settingsOverlay.addEventListener("click", (event) => {
+  if (event.target === settingsOverlay) {
+    closeSettings();
+  }
+});
+
+document.addEventListener("keydown", (event) => {
+  if (event.key === "Escape" && !settingsOverlay.hidden) {
+    closeSettings();
+  }
+});
+
+includeStaffCreditsCheckbox.addEventListener("change", () => {
+  chrome.storage.local.set({
+    includeStaffCredits: includeStaffCreditsCheckbox.checked
+  });
+});
+
 saveButton.addEventListener("click", () => {
   const username = usernameInput.value.trim();
 
@@ -65,6 +98,30 @@ saveButton.addEventListener("click", () => {
 
   chrome.storage.local.set({ mdlUsername: username }, () => {
     setStatus("Username saved.");
+  });
+});
+
+clearDataButton.addEventListener("click", () => {
+  chrome.storage.local.get(["includeStaffCredits"], (result) => {
+    const includeStaffCredits = result.includeStaffCredits !== false;
+
+    chrome.storage.local.set(
+      {
+        mdlUsername: "",
+        syncedIds: [],
+        syncedTitles: {},
+        posterCache: {},
+        posterCacheOrder: [],
+        lastSyncedAt: null,
+        includeStaffCredits
+      },
+      () => {
+        usernameInput.value = "";
+        setStatus("Cleared synced data.");
+        setLastSynced(null);
+        closeSettings();
+      }
+    );
   });
 });
 

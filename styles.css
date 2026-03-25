@@ -181,6 +181,14 @@ html {
   font-weight: 700;
   line-height: 1.35;
   margin-bottom: 6px;
+
+  overflow: hidden;
+  min-height: calc(1.35em * 2);
+
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
 }
 
 .ymktf-title-card__meta {

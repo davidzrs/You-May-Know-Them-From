@@ -10,8 +10,25 @@
   <div class="popup-shell">
     <div class="popup-card">
       <div class="popup-header">
-        <div class="popup-title">You May Know Them From</div>
-        <div class="popup-subtitle">Sync your MyDramaList library</div>
+        <div>
+          <div class="popup-title">You May Know Them From</div>
+          <div class="popup-subtitle">Sync your MyDramaList library</div>
+        </div>
+
+        <div class="popup-header__actions">
+          <button
+            id="settingsButton"
+            class="icon-button"
+            type="button"
+            aria-label="Settings"
+            title="Settings"
+          >
+            <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <circle cx="12" cy="12" r="3"></circle>
+              <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09a1.65 1.65 0 0 0-1-1.51 1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09a1.65 1.65 0 0 0 1.51-1 1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33h0A1.65 1.65 0 0 0 10 3.09V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51h0a1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82v0A1.65 1.65 0 0 0 20.91 10H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1Z"></path>
+            </svg>
+          </button>
+        </div>
       </div>
 
       <div class="popup-section">
@@ -30,8 +47,10 @@
         <button id="syncButton" class="primary-button">Sync watched lists</button>
       </div>
 
-      <div id="status" class="status-text">Ready to sync.</div>
-      <div id="lastSynced" class="last-synced-text">Last synced: never</div>
+      <div class="status-block">
+        <div id="status" class="status-text">Ready to sync.</div>
+        <div id="lastSynced" class="last-synced-text">Last synced: never</div>
+      </div>
 
       <div class="popup-footer">
         <a
@@ -64,6 +83,34 @@
             </svg>
           </span>
         </a>
+      </div>
+
+      <div id="settingsOverlay" class="settings-overlay" hidden>
+        <div class="settings-overlay__panel">
+          <div class="settings-overlay__header">
+            <div class="settings-overlay__title">Settings</div>
+            <button
+              id="closeSettingsButton"
+              class="icon-button"
+              type="button"
+              aria-label="Close settings"
+              title="Close settings"
+            >
+              <span aria-hidden="true">×</span>
+            </button>
+          </div>
+
+          <div class="settings-overlay__body">
+            <label class="toggle-label">
+              <input id="includeStaffCredits" type="checkbox" class="toggle-checkbox" checked />
+              <span class="toggle-label__text">Include staff credits</span>
+            </label>
+
+            <button id="clearDataButton" class="tertiary-button settings-clear-button" type="button">
+              Clear synced data
+            </button>
+          </div>
+        </div>
       </div>
     </div>
   </div>

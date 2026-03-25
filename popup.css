@@ -33,7 +33,7 @@ body {
   margin: 0;
   padding: 0;
   width: 318px;
-  min-height: 395px;
+  min-height: 374px;
   background: #1a1a1a;
   color: var(--text);
   font-family: Inter, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
@@ -48,20 +48,29 @@ body {
 }
 
 .popup-card {
+  position: relative;
   width: 100%;
-  min-height: 380px;
+  min-height: 360px;
   background: #1a1a1a;
   border: none;
   border-radius: 18px;
   box-shadow: none;
-  padding: 18px 14px 12px 14px;
-
+  padding: 16px 14px 14px 14px;
   display: flex;
   flex-direction: column;
+  overflow: hidden;
 }
 
 .popup-header {
-  margin-bottom: 18px;
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.popup-header__actions {
+  flex: 0 0 auto;
 }
 
 .popup-title {
@@ -70,13 +79,35 @@ body {
   line-height: 1.1;
   letter-spacing: -0.02em;
   margin-bottom: 8px;
-  max-width: 230px;
+  max-width: 220px;
 }
 
 .popup-subtitle {
   font-size: 13px;
   color: var(--muted);
   line-height: 1.4;
+}
+
+.icon-button {
+  appearance: none;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: #232323;
+  color: var(--muted);
+  width: 34px;
+  height: 34px;
+  border-radius: 999px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: transform 0.14s ease, background 0.14s ease, color 0.14s ease;
+  padding: 0;
+}
+
+.icon-button:hover {
+  transform: translateY(-1px);
+  background: #2a2a2a;
+  color: var(--text);
 }
 
 .popup-section {
@@ -118,7 +149,7 @@ body {
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 10px;
-  margin-bottom: 14px;
+  margin-bottom: 10px;
 }
 
 .primary-button,
@@ -126,9 +157,11 @@ body {
   appearance: none;
   border: 0;
   border-radius: 999px;
-  padding: 13px 14px;
-  font-size: 13px;
+  padding: 9px 12px;
+  font-size: 12px;
   font-weight: 700;
+  line-height: 1.2;
+  white-space: nowrap;
   cursor: pointer;
   transition: transform 0.14s ease, background 0.14s ease, opacity 0.14s ease;
 }
@@ -157,21 +190,24 @@ body {
   background: var(--secondary-hover);
 }
 
+.status-block {
+  margin: 2px 0 8px;
+}
+
 .status-text {
   min-height: 20px;
   font-size: 13px;
   color: var(--muted);
   line-height: 1.4;
-  margin: 4px 0 10px;
   white-space: pre-wrap;
+  margin: 0 0 2px 0;
 }
 
 .last-synced-text {
-  min-height: 18px;
-  font-size: 12px;
+  font-size: 11px;
   color: var(--muted-2);
   line-height: 1.4;
-  margin: -4px 0 14px;
+  margin: 0;
 }
 
 .popup-footer {
@@ -232,4 +268,102 @@ body {
 
 .footer-link--github:hover {
   background: var(--footer-button-hover);
+}
+
+.settings-overlay {
+  position: absolute;
+  inset: 0;
+  background: rgba(26, 26, 26, 0.12);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  align-items: flex-start;
+  justify-content: center;
+  padding: 4px 14px 16px 14px;
+  z-index: 20;
+  border-radius: 18px;
+}
+
+.settings-overlay:not([hidden]) {
+  display: flex;
+}
+
+.settings-overlay[hidden] {
+  display: none !important;
+}
+
+.settings-overlay__panel {
+  width: 100%;
+  background: #1d1d1f;
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: 16px;
+  padding: 14px;
+  box-shadow: 0 12px 24px rgba(0, 0, 0, 0.22);
+}
+
+.settings-overlay__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 14px;
+}
+
+.settings-overlay__title {
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--text);
+}
+
+.settings-overlay__body {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.toggle-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+  user-select: none;
+}
+
+.toggle-label__text {
+  font-size: 12px;
+  color: var(--muted);
+  line-height: 1.2;
+}
+
+.toggle-checkbox {
+  width: 14px;
+  height: 14px;
+  accent-color: var(--accent);
+  cursor: pointer;
+  margin: 0;
+  flex: 0 0 auto;
+}
+
+.tertiary-button {
+  appearance: none;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: transparent;
+  color: var(--muted-2);
+  border-radius: 999px;
+  padding: 7px 12px;
+  font-size: 11px;
+  font-weight: 600;
+  line-height: 1.2;
+  white-space: nowrap;
+  cursor: pointer;
+  transition: transform 0.14s ease, background 0.14s ease, color 0.14s ease;
+}
+
+.tertiary-button:hover {
+  transform: translateY(-1px);
+  background: rgba(255, 255, 255, 0.04);
+  color: var(--text);
+}
+
+.settings-clear-button {
+  align-self: flex-start;
 }
