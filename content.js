@@ -6,6 +6,13 @@ function startExtension() {
     return;
   }
 
+  const path = window.location.pathname;
+  const isMainPeoplePage = /^\/people\/\d+-[^/]+$/.test(path);
+
+  if (!isMainPeoplePage) {
+    return;
+  }
+
   window[FLAG_NAME] = true;
   console.log("You May Know Them From: script started!");
 
@@ -70,6 +77,13 @@ function startExtension() {
     closeButton.addEventListener("click", () => {
       backdrop.hidden = true;
       document.body.style.overflow = "";
+    });
+
+    document.addEventListener("keydown", (event) => {
+      if (event.key === "Escape" && !backdrop.hidden) {
+        backdrop.hidden = true;
+        document.body.style.overflow = "";
+      }
     });
 
     backdrop.addEventListener("click", (event) => {
