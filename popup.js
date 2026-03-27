@@ -3,9 +3,16 @@ const saveButton = document.querySelector("#saveButton");
 const syncButton = document.querySelector("#syncButton");
 const clearDataButton = document.querySelector("#clearDataButton");
 const includeStaffCreditsCheckbox = document.querySelector("#includeStaffCredits");
+
 const settingsButton = document.querySelector("#settingsButton");
 const closeSettingsButton = document.querySelector("#closeSettingsButton");
 const settingsOverlay = document.querySelector("#settingsOverlay");
+
+const confirmClearOverlay = document.querySelector("#confirmClearOverlay");
+const closeConfirmClearButton = document.querySelector("#closeConfirmClearButton");
+const cancelClearButton = document.querySelector("#cancelClearButton");
+const confirmClearButton = document.querySelector("#confirmClearButton");
+
 const statusText = document.querySelector("#status");
 const lastSyncedText = document.querySelector("#lastSynced");
 
@@ -55,6 +62,14 @@ function closeSettings() {
   settingsOverlay.setAttribute("hidden", "");
 }
 
+function openClearConfirm() {
+  confirmClearOverlay.removeAttribute("hidden");
+}
+
+function closeClearConfirm() {
+  confirmClearOverlay.setAttribute("hidden", "");
+}
+
 chrome.storage.local.get(["mdlUsername", "lastSyncedAt", "includeStaffCredits"], (result) => {
   if (result.mdlUsername) {
     usernameInput.value = result.mdlUsername;
@@ -76,8 +91,30 @@ settingsOverlay.addEventListener("click", (event) => {
   }
 });
 
+clearDataButton.addEventListener("click", () => {
+  openClearConfirm();
+});
+
+closeConfirmClearButton.addEventListener("click", closeClearConfirm);
+cancelClearButton.addEventListener("click", closeClearConfirm);
+
+confirmClearOverlay.addEventListener("click", (event) => {
+  if (event.target === confirmClearOverlay) {
+    closeClearConfirm();
+  }
+});
+
 document.addEventListener("keydown", (event) => {
-  if (event.key === "Escape" && !settingsOverlay.hidden) {
+  if (event.key !== "Escape") {
+    return;
+  }
+
+  if (!confirmClearOverlay.hidden) {
+    closeClearConfirm();
+    return;
+  }
+
+  if (!settingsOverlay.hidden) {
     closeSettings();
   }
 });
@@ -101,7 +138,7 @@ saveButton.addEventListener("click", () => {
   });
 });
 
-clearDataButton.addEventListener("click", () => {
+confirmClearButton.addEventListener("click", () => {
   chrome.storage.local.get(["includeStaffCredits"], (result) => {
     const includeStaffCredits = result.includeStaffCredits !== false;
 
@@ -119,6 +156,7 @@ clearDataButton.addEventListener("click", () => {
         usernameInput.value = "";
         setStatus("Cleared synced data.");
         setLastSynced(null);
+        closeClearConfirm();
         closeSettings();
       }
     );
