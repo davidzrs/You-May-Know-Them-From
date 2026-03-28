@@ -58,7 +58,7 @@ function startExtension() {
 
     function reserveSpaceForBanner() {
       const bannerHeight = card.offsetHeight;
-      document.body.style.paddingTop = `${bannerHeight + 18}px`;
+      document.body.style.paddingTop = `${bannerHeight + 1}px`;
     }
 
     requestAnimationFrame(reserveSpaceForBanner);
