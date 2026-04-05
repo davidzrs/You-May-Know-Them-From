@@ -1,8 +1,8 @@
 {
   "manifest_version": 3,
   "name": "You May Know Them From",
-  "version": "0.1",
-  "description": "Shows dramas you've completed that feature the selected actor on MyDramaList.",
+  "version": "1.0.0",
+  "description": "Shows which titles from your MyDramaList library you know an actor, director, writer, or other credited person from.",
   "permissions": ["storage"],
   "host_permissions": ["https://mydramalist.com/*"],
   "content_scripts": [
@@ -27,5 +27,10 @@
     "32": "ymktf_icon.png",
     "48": "ymktf_icon.png",
     "128": "ymktf_icon.png"
+  },
+  "browser_specific_settings": {
+    "gecko": {
+      "id": "youmayknowthemfrom@davidzrs.com"
+    }
   }
 }
