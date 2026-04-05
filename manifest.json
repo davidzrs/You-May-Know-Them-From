@@ -1,6 +1,6 @@
 {
   "manifest_version": 3,
-  "name": "You May Know Them From",
+  "name": "You May Know Them From (MDL)",
   "version": "1.0.0",
   "description": "Shows which titles from your MyDramaList library you know an actor, director, writer, or other credited person from.",
   "permissions": ["storage"],
@@ -13,7 +13,7 @@
     }
   ],
   "action": {
-    "default_title": "You May Know Them From",
+    "default_title": "You May Know Them From (MDL)",
     "default_popup": "popup.html",
     "default_icon": {
       "16": "ymktf_icon.png",

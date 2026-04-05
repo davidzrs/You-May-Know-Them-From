@@ -1,4 +1,4 @@
-# You May Know Them From
+# You May Know Them From (MDL)
 
 A browser extension for MyDramaList that shows which titles from **your own MDL library** you know an actor, director, writer, or other credited person from.
 
