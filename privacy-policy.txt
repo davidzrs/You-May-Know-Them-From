@@ -1,0 +1,23 @@
+Privacy Policy – You May Know Them From (MDL)
+
+This extension does not collect, transmit, or store personal data on external servers.
+
+Data stored locally in your browser includes:
+- Your MyDramaList username (this will be typed in by the user)
+- Synced title data (IDs and metadata)
+- Extension settings
+- Poster image cache
+- Last sync timestamp
+
+All data is stored using browser local storage and remains on your device.
+
+The extension accesses MyDramaList pages solely to:
+- Read credits on people pages
+- Sync your library data
+- Retrieve poster images
+
+No data is sold, transferred, or shared with third parties.
+
+No tracking, analytics, or external services are used.
+
+This extension is a fan-made project and is not affiliated with MyDramaList.
