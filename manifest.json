@@ -30,7 +30,10 @@
   },
   "browser_specific_settings": {
     "gecko": {
-      "id": "youmayknowthemfrom@davidzrs.com"
+      "id": "you-may-know-them-from-mdl@davidzrs",
+      "data_collection_permissions": {
+        "required": ["none"]
+      }
     }
   }
 }
