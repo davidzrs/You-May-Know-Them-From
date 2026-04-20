@@ -125,6 +125,31 @@ function startExtension() {
     return undefined;
   }
 
+  function getTitleLinkFromRow(row) {
+    return [...row.querySelectorAll('a[href^="/"]')].find((a) => {
+      const href = a.getAttribute("href") || "";
+      const text = (a.textContent || "").trim();
+      return /^\/\d+-/.test(href) && text.length > 0;
+    });
+  }
+
+  function findTableAfterHeading(heading) {
+    let node = heading.nextElementSibling;
+
+    while (node) {
+      if (/^H[1-6]$/.test(node.tagName)) return null;
+
+      if (node.tagName === "TABLE") return node;
+
+      const nestedTable = node.querySelector?.("table");
+      if (nestedTable) return nestedTable;
+
+      node = node.nextElementSibling;
+    }
+
+    return null;
+  }
+
   function titlesFromTableAfter(headingText) {
     const heading = findHeading(headingText);
     if (!heading) {
@@ -132,12 +157,8 @@ function startExtension() {
       return [];
     }
 
-    let table = heading.nextElementSibling;
-    while (table && table.tagName !== "TABLE") {
-      table = table.nextElementSibling;
-    }
-
-    if (!table || table.tagName !== "TABLE") {
+    const table = findTableAfterHeading(heading);
+    if (!table) {
       console.log(`[YMKTF] No table found after "${headingText}" heading`);
       return [];
     }
@@ -164,7 +185,7 @@ function startExtension() {
     ]);
 
     for (const row of rows) {
-      const titleLink = row.querySelector('a[href^="/"]');
+      const titleLink = getTitleLinkFromRow(row);
       if (!titleLink) {
         continue;
       }
@@ -412,32 +433,49 @@ function startExtension() {
       card.target = "_blank";
       card.rel = "noopener noreferrer";
 
-      // Prefer HQ cached poster if available (high quality)
       const posterToUse = posterCache[item.id] || item.poster || "";
 
       if (posterCache[item.id]) {
         touchPosterCacheKey(item.id);
       }
 
-      const posterHtml = posterToUse
-        ? `<img class="ymktf-title-card__poster" data-title-id="${escapeHtml(item.id)}" src="${escapeHtml(posterToUse)}" alt="${escapeHtml(item.name)} poster">`
-        : `<div class="ymktf-title-card__poster-placeholder" data-placeholder-id="${escapeHtml(item.id)}">No poster</div>`;
+      const media = document.createElement("div");
+      media.className = "ymktf-title-card__media";
+
+      if (posterToUse) {
+        const img = document.createElement("img");
+        img.className = "ymktf-title-card__poster";
+        img.dataset.titleId = item.id;
+        img.src = posterToUse;
+        img.alt = `${item.name} poster`;
+        media.appendChild(img);
+      } else {
+        const placeholder = document.createElement("div");
+        placeholder.className = "ymktf-title-card__poster-placeholder";
+        placeholder.dataset.placeholderId = item.id;
+        placeholder.textContent = "No poster";
+        media.appendChild(placeholder);
+      }
+
+      const body = document.createElement("div");
+      body.className = "ymktf-title-card__body";
+
+      const name = document.createElement("div");
+      name.className = "ymktf-title-card__name";
+      name.textContent = item.name;
+      body.appendChild(name);
 
       const metaLines = buildMetaLines(item);
 
-      card.innerHTML = `
-        <div class="ymktf-title-card__media">
-          ${posterHtml}
-        </div>
-        <div class="ymktf-title-card__body">
-          <div class="ymktf-title-card__name">${escapeHtml(item.name)}</div>
-          ${metaLines.map(line => `
-            <div class="ymktf-title-card__meta ymktf-title-card__meta--${escapeHtml(line.type)}">
-              ${escapeHtml(line.text)}
-            </div>
-          `).join("")}
-        </div>
-      `;
+      for (const line of metaLines) {
+        const meta = document.createElement("div");
+        meta.className = `ymktf-title-card__meta ymktf-title-card__meta--${line.type}`;
+        meta.textContent = line.text;
+        body.appendChild(meta);
+      }
+
+      card.appendChild(media);
+      card.appendChild(body);
 
       modalGrid.appendChild(card);
     }

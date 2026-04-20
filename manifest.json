@@ -16,17 +16,11 @@
     "default_title": "You May Know Them From (MDL)",
     "default_popup": "popup.html",
     "default_icon": {
-      "16": "ymktf_icon.png",
-      "32": "ymktf_icon.png",
-      "48": "ymktf_icon.png",
-      "128": "ymktf_icon.png"
+      "128": "icon_128.png"
     }
   },
   "icons": {
-    "16": "ymktf_icon.png",
-    "32": "ymktf_icon.png",
-    "48": "ymktf_icon.png",
-    "128": "ymktf_icon.png"
+    "128": "icon_128.png"
   },
   "browser_specific_settings": {
     "gecko": {
